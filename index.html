@@ -267,6 +267,8 @@ function render() {
         <option ${selected(FILTERS.group,'B小組')}>B小組</option>
         <option ${selected(FILTERS.group,'C小組')}>C小組</option>
         <option ${selected(FILTERS.group,'D小組')}>D小組</option>
+        <option ${selected(FILTERS.group,'代發小組')}>代發小組</option>
+        <option ${selected(FILTERS.group,'其他小組')}>其他小組</option>
       </select>
       <select id="fStatus" class="${activeClass(FILTERS.status)}" onchange="setFilter('status', this.value)">
         <option value="">全部狀態</option>
