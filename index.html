@@ -176,6 +176,14 @@ function normalizeType(value) {
   return s ? String(value || '').trim() : '';
 }
 
+function typeMatchesFilter(itemType, filterType) {
+  if (!filterType) return true;
+  const normalized = normalizeType(itemType);
+  if (filterType === '影音') return normalized === '影音' || normalized === '影音+Threads';
+  if (filterType === '脆') return normalized === '脆' || normalized === '影音+Threads';
+  return normalized === filterType;
+}
+
 function loadData() {
   document.getElementById('statusDot').className = 'status-dot loading';
   document.getElementById('app').innerHTML = '<div class="loading-state">載入資料中...</div>';
@@ -227,7 +235,7 @@ function getItems() {
     if (FILTERS.status === 'ok' && !it.isOk) return false;
     if (FILTERS.status === 'danger' && it.isOk) return false;
     if (FILTERS.priority && it.priority !== FILTERS.priority) return false;
-    if (FILTERS.type && normalizeType(it.type) !== FILTERS.type) return false;
+    if (!typeMatchesFilter(it.type, FILTERS.type)) return false;
     return true;
   });
 }
