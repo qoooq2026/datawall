@@ -224,7 +224,7 @@ function render() {
   const items = getItems();
   const okCnt = items.filter(i=>i.isOk).length;
   const dangerCnt = items.filter(i=>!i.isOk && i.exposureRate < SAFE*0.7).length;
-  const totalPosts = items.reduce((s,i)=>s+(Number(i.totalCount)||0),0);
+  const totalUnits = items.reduce((s,i)=>s+(Number(i.totalCount)||0),0);
   const totalExposure = items.reduce((s,i)=>s+(Number(i.totalExposure)||0),0);
   const totalRevenue = items.reduce((s,i)=>s+(Number(i.totalRevenue)||0),0);
   const totalGapExp = items.reduce((s,i)=>s+(Number(i.exposureGap)||0),0);
@@ -272,7 +272,7 @@ function render() {
     <div class="metrics">
       <div class="mc"><div class="mc-label">商品數</div><div class="mc-val">${items.length}</div><div class="mc-sub">達標${okCnt} / 落後${items.length-okCnt}</div></div>
       <div class="mc"><div class="mc-label">危險商品</div><div class="mc-val red">${dangerCnt}</div><div class="mc-sub">低於安全線70%</div></div>
-      <div class="mc"><div class="mc-label">累積投稿</div><div class="mc-val">${totalPosts}</div><div class="mc-sub">支</div></div>
+      <div class="mc"><div class="mc-label">累積支數</div><div class="mc-val">${totalUnits}</div><div class="mc-sub">支</div></div>
       <div class="mc"><div class="mc-label">累積曝光</div><div class="mc-val">${fmtM(totalExposure)}</div><div class="mc-sub">次</div></div>
       <div class="mc"><div class="mc-label">累積收費</div><div class="mc-val">$${fmtM(totalRevenue)}</div><div class="mc-sub">元</div></div>
       <div class="mc"><div class="mc-label">曝光缺口</div><div class="mc-val">${fmtM(totalGapExp)}</div><div class="mc-sub">次</div></div>
@@ -355,7 +355,7 @@ function renderCard(it) {
       </div>
     </div>
     <div class="stats3">
-      <div class="st"><div class="st-l">投稿數</div><div class="st-v">${it.totalCount||0}</div><div class="st-s">影音${it.videoCount||0}/脆${it.threadCount||0}</div></div>
+      <div class="st"><div class="st-l">支數</div><div class="st-v">${it.totalCount||0}</div><div class="st-s">影音${it.videoCount||0}/脆${it.threadCount||0}</div></div>
       <div class="st"><div class="st-l">${targetLabel}</div><div class="st-v">${fmtM(target)}</div><div class="st-s">${budgetLabel} $${fmtM(budget)}</div></div>
       <div class="st"><div class="st-l">單價</div><div class="st-v">${it.unitPrice||0}</div><div class="st-s">元/次</div></div>
     </div>
