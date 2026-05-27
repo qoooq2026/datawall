@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>308 業務達成監控</title>
+<style>
+:root {
+  --bg: #f7f6f3;
+  --surface: #ffffff;
+  --border: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.15);
+  --text: #1a1a1a;
+  --text-2: #555;
+  --text-3: #999;
+  --green: #2d6a4f;
+  --green-bg: #d8f3dc;
+  --amber: #92400e;
+  --amber-bg: #fef3c7;
+  --red: #991b1b;
+  --red-bg: #fee2e2;
+  --blue: #1e40af;
+  --blue-bg: #dbeafe;
+  --safe-line: #94a3b8;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'PingFang TC', 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: sticky; top: 0; z-index: 10; }
+.logo { font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+.logo span { color: var(--text-3); font-weight: 400; margin-left: 6px; font-size: 13px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.refresh-btn { font-size: 12px; padding: 5px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: transparent; color: var(--text-2); cursor: pointer; }
+.refresh-btn:hover { background: var(--bg); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+.status-dot.loading { background: var(--amber); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+main { max-width: 960px; margin: 0 auto; padding: 20px 16px; }
+
+.toprow { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.info-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.pill { font-size: 12px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); }
+.pill.ok { background: var(--green-bg); color: var(--green); border-color: transparent; }
+.pill.warn { background: var(--amber-bg); color: var(--amber); border-color: transparent; }
+.pill.danger { background: var(--red-bg); color: var(--red); border-color: transparent; }
+
+.view-toggle { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.vt-btn { font-size: 13px; padding: 6px 16px; border: none; background: transparent; color: var(--text-2); cursor: pointer; transition: all .15s; }
+.vt-btn.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.filters select { font-size: 13px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); cursor: pointer; }
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 18px; }
+.mc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.mc-label { font-size: 11px; color: var(--text-3); margin-bottom: 4px; }
+.mc-val { font-size: 20px; font-weight: 600; }
+.mc-val.red { color: var(--red); }
+.mc-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+.safe-legend { font-size: 11px; color: var(--text-3); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.safe-legend::before { content:''; display:inline-block; width:14px; height:3px; background:var(--safe-line); border-radius:2px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; transition: border-color .15s; }
+.card.c-danger { border-left: 3px solid #f87171; border-left-color: #f87171; }
+.card.c-warn { border-left: 3px solid #fbbf24; }
+.card.c-ok { border-left: 3px solid #4ade80; }
+
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+.card-info { flex: 1; min-width: 0; }
+.brand-name { font-size: 11px; color: var(--text-3); margin-bottom: 2px; }
+.prod-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; }
+.badges { display: flex; gap: 4px; flex-wrap: wrap; }
+.badge { font-size: 11px; padding: 1px 7px; border-radius: 20px; background: var(--bg); color: var(--text-2); border: 1px solid var(--border); }
+.badge.b-hi { background: var(--red-bg); color: var(--red); border-color: transparent; }
+.badge.b-mid { background: var(--amber-bg); color: var(--amber); border-color: transparent; }
+.badge.b-lo { background: var(--green-bg); color: var(--green); border-color: transparent; }
+.badge.b-ok { background: var(--green-bg); color: var(--green); border-color: transparent; }
+.badge.b-warn { background: var(--amber-bg); color: var(--amber); border-color: transparent; }
+.badge.b-danger { background: var(--red-bg); color: var(--red); border-color: transparent; }
+
+.rate-box { text-align: right; min-width: 64px; }
+.rate-num { font-size: 22px; font-weight: 700; }
+.rate-safe { font-size: 11px; color: var(--text-3); }
+
+.pbar-row { margin-bottom: 6px; }
+.pbar-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-2); margin-bottom: 3px; }
+.pbar-track { height: 7px; background: var(--bg); border-radius: 4px; position: relative; overflow: visible; }
+.pbar-fill { height: 100%; border-radius: 4px; min-width: 2px; }
+.safe-marker { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--safe-line); border-radius: 1px; }
+
+.stats3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin: 10px 0; }
+.st { background: var(--bg); border-radius: var(--radius-sm); padding: 7px 8px; text-align: center; }
+.st-l { font-size: 10px; color: var(--text-3); margin-bottom: 2px; }
+.st-v { font-size: 13px; font-weight: 600; }
+.st-s { font-size: 10px; color: var(--text-3); margin-top: 1px; }
+
+.suggest { font-size: 12px; padding: 7px 10px; border-radius: var(--radius-sm); margin-top: 4px; }
+.sg-ok { background: var(--green-bg); color: var(--green); }
+.sg-warn { background: var(--amber-bg); color: var(--amber); }
+.sg-danger { background: var(--red-bg); color: var(--red); }
+
+.alloc-wrap { margin-top: 20px; }
+.section-title { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 10px; }
+.alloc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.cap-inputs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; font-size: 12px; }
+.cap-item { display: flex; align-items: center; gap: 4px; }
+.cap-item input { width: 50px; padding: 3px 6px; font-size: 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); }
+.alloc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 8px; }
+.ag { background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; }
+.ag-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+.ag-cap { font-size: 11px; color: var(--text-3); margin-bottom: 5px; }
+.ag-bar { height: 4px; background: rgba(0,0,0,.08); border-radius: 2px; margin-bottom: 6px; overflow: hidden; }
+.ag-fill { height: 100%; background: #3b82f6; border-radius: 2px; }
+.ag-tasks { font-size: 11px; color: var(--text-2); line-height: 1.9; }
+.ag-empty { font-size: 11px; color: var(--text-3); }
+
+.loading-state { text-align: center; padding: 3rem; color: var(--text-3); font-size: 14px; }
+.error-state { text-align: center; padding: 3rem; color: var(--red); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">308 業務達成監控 <span id="weekLabel"></span></div>
+  <div class="header-right">
+    <div class="status-dot loading" id="statusDot"></div>
+    <button class="refresh-btn" onclick="loadData()">重新整理</button>
+  </div>
+</header>
+
+<main>
+  <div id="app"><div class="loading-state">載入資料中...</div></div>
+</main>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxyx3YxEYl1_qYt8Aey2SeloM_kmZYJM_iIhmhbjogfILoVJXn6dzUQgAyE61wWeMY/exec';
+
+const today = new Date();
+const day = today.getDate();
+const totalDays = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
+const SAFE = Math.round(day / totalDays * 100);
+const WEEK_OF_MO = Math.ceil(day / 7);
+const MO_NAMES = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+
+let DATA = null;
+let VIEW = 'month'; // 'month' | 'week'
+let groupCap = {'A小組|影音':36,'A小組|Threads':60,'B小組|影音':48,'B小組|Threads':24,'C小組|影音':48,'C小組|Threads':24,'D小組|Threads':60};
+
+function fmt(n){ return Math.round(n).toLocaleString(); }
+function fmtM(n){ return n>=10000?(n/10000).toFixed(1)+'萬':Math.round(n).toLocaleString(); }
+function rateClr(r){ return r>=SAFE?'#16a34a':r>=SAFE*0.7?'#d97706':'#dc2626'; }
+function rateMainClr(r){ return r>=SAFE?'#16a34a':r>=SAFE*0.7?'#d97706':'#dc2626'; }
+
+function loadData() {
+  document.getElementById('statusDot').className = 'status-dot loading';
+  document.getElementById('app').innerHTML = '<div class="loading-state">載入資料中...</div>';
+
+  const script = document.createElement('script');
+  const cb = 'cb_' + Date.now();
+  window[cb] = function(data) {
+    DATA = data;
+    document.getElementById('statusDot').className = 'status-dot';
+    document.getElementById('weekLabel').textContent = data.weekLabel || '';
+    render();
+    delete window[cb];
+    script.remove();
+  };
+  script.onerror = function() {
+    document.getElementById('app').innerHTML = '<div class="error-state">無法載入資料，請確認 GAS 部署設定（存取權限需設為「所有人」）</div>';
+    document.getElementById('statusDot').className = 'status-dot loading';
+  };
+  script.src = GAS_URL + '?callback=' + cb;
+  document.head.appendChild(script);
+}
+
+function getItems() {
+  if (!DATA) return [];
+  const items = VIEW === 'week' ? (DATA.weekItems || DATA.items) : (DATA.monthItems || DATA.items);
+  const g = document.getElementById('fGroup')?.value || '';
+  const s = document.getElementById('fStatus')?.value || '';
+  const p = document.getElementById('fPri')?.value || '';
+  return items.filter(it => {
+    if (g && it.group !== g) return false;
+    if (s === 'ok' && !it.isOk) return false;
+    if (s === 'danger' && it.isOk) return false;
+    if (p && it.priority !== p) return false;
+    return true;
+  });
+}
+
+function render() {
+  const items = getItems();
+  const okCnt = items.filter(i=>i.isOk).length;
+  const dangerCnt = items.filter(i=>!i.isOk && i.exposureRate < SAFE*0.7).length;
+  const totalGapExp = items.reduce((s,i)=>s+i.exposureGap,0);
+  const totalGapRev = items.reduce((s,i)=>s+i.revenueGap,0);
+  const totalSug = items.reduce((s,i)=>s+i.suggestPosts,0);
+
+  const safeClass = WEEK_OF_MO >= 4 ? 'danger' : WEEK_OF_MO >= 3 ? 'warn' : 'ok';
+  const viewLabel = VIEW === 'week' ? '本週進度' : '本月累計';
+
+  document.getElementById('app').innerHTML = `
+    <div class="toprow">
+      <div class="info-pills">
+        <span class="pill">${MO_NAMES[today.getMonth()]}月 第${WEEK_OF_MO}週 · ${DATA?.weekLabel||''}</span>
+        <span class="pill ${safeClass}">安全線 ${SAFE}%（今天 ${day}/${totalDays} 天）</span>
+        <span class="pill">${viewLabel}</span>
+      </div>
+      <div class="view-toggle">
+        <button class="vt-btn ${VIEW==='month'?'active':''}" onclick="switchView('month')">月累計</button>
+        <button class="vt-btn ${VIEW==='week'?'active':''}" onclick="switchView('week')">本週</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <select id="fGroup" onchange="render()">
+        <option value="">所有小組</option>
+        <option>A小組</option><option>B小組</option><option>C小組</option><option>D小組</option>
+      </select>
+      <select id="fStatus" onchange="render()">
+        <option value="">全部狀態</option>
+        <option value="danger">落後安全線</option>
+        <option value="ok">安全線以上</option>
+      </select>
+      <select id="fPri" onchange="render()">
+        <option value="">所有優先級</option>
+        <option>高</option><option>中</option><option>低</option>
+      </select>
+    </div>
+
+    <div class="metrics">
+      <div class="mc"><div class="mc-label">商品數</div><div class="mc-val">${items.length}</div><div class="mc-sub">達標${okCnt} / 落後${items.length-okCnt}</div></div>
+      <div class="mc"><div class="mc-label">危險商品</div><div class="mc-val red">${dangerCnt}</div><div class="mc-sub">低於安全線70%</div></div>
+      <div class="mc"><div class="mc-label">曝光缺口</div><div class="mc-val">${fmtM(totalGapExp)}</div><div class="mc-sub">次</div></div>
+      <div class="mc"><div class="mc-label">收費缺口</div><div class="mc-val">$${fmtM(totalGapRev)}</div><div class="mc-sub">元</div></div>
+      <div class="mc"><div class="mc-label">建議補片</div><div class="mc-val">${totalSug}</div><div class="mc-sub">支</div></div>
+    </div>
+
+    <div class="safe-legend">灰色垂直線 = 今日安全線（${SAFE}%），進度條須超過此線才安全</div>
+
+    ${items.map(it => renderCard(it)).join('')}
+
+    <div class="alloc-wrap">
+      <div class="section-title">產能分配建議</div>
+      <div class="alloc-card">
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:10px">各小組週產能（可調整後重新計算）</div>
+        <div class="cap-inputs" id="capInputs"></div>
+        <button class="refresh-btn" onclick="recalcAlloc()" style="margin-bottom:12px">重新計算分配</button>
+        <div class="alloc-grid" id="allocGrid"></div>
+      </div>
+    </div>
+  `;
+
+  renderCapInputs();
+  recalcAlloc();
+}
+
+function renderCard(it) {
+  const eR = it.exposureRate || 0;
+  const rR = it.revenueRate || 0;
+  const eClr = rateClr(eR);
+  const rClr = rateClr(rR);
+  const cardCls = it.isOk ? 'c-ok' : eR >= SAFE*0.7 ? 'c-warn' : 'c-danger';
+  const stCls = it.isOk ? 'b-ok' : eR >= SAFE*0.7 ? 'b-warn' : 'b-danger';
+  const stTxt = it.isOk ? '安全' : eR >= SAFE*0.7 ? '注意' : '危險';
+  const priCls = it.priority==='高'?'b-hi':it.priority==='中'?'b-mid':'b-lo';
+  const sgCls = it.isOk ? 'sg-ok' : eR >= SAFE*0.7 ? 'sg-warn' : 'sg-danger';
+  const sugTxt = it.isOk ? '本期目標達成，繼續保持'
+    : `建議補 <strong>${it.suggestPosts}</strong> 支，估補曝光 ${fmtM(it.exposureGap)} 次，收費缺口 $${fmtM(it.revenueGap)} 元`;
+  const safePos = Math.min(98, SAFE);
+
+  const targetLabel = VIEW === 'week' ? '週目標' : '月目標';
+  const budgetLabel = VIEW === 'week' ? '週預算' : '月預算';
+  const target = it.monthTarget || it.weekTarget || 0;
+  const budget = it.monthBudget || it.budget || 0;
+
+  return `<div class="card ${cardCls}">
+    <div class="card-top">
+      <div class="card-info">
+        <div class="brand-name">${it.brand}</div>
+        <div class="prod-name">${it.product}</div>
+        <div class="badges">
+          <span class="badge">${it.group}</span>
+          <span class="badge ${priCls}">${it.priority}優先</span>
+          <span class="badge ${stCls}">${stTxt}</span>
+          <span class="badge">${it.type}</span>
+        </div>
+      </div>
+      <div class="rate-box">
+        <div class="rate-num" style="color:${rateMainClr(eR)}">${eR}%</div>
+        <div class="rate-safe">安全線 ${SAFE}%</div>
+      </div>
+    </div>
+    <div class="pbar-row">
+      <div class="pbar-meta"><span>曝光 ${fmt(it.totalExposure)} / ${fmt(target)}</span><span style="color:${eClr}">${eR}%</span></div>
+      <div class="pbar-track">
+        <div class="pbar-fill" style="width:${Math.min(100,eR)}%;background:${eClr}"></div>
+        <div class="safe-marker" style="left:${safePos}%"></div>
+      </div>
+    </div>
+    <div class="pbar-row">
+      <div class="pbar-meta"><span>收費 $${fmt(it.totalRevenue)} / $${fmt(budget)}</span><span style="color:${rClr}">${rR}%</span></div>
+      <div class="pbar-track">
+        <div class="pbar-fill" style="width:${Math.min(100,rR)}%;background:${rClr}"></div>
+        <div class="safe-marker" style="left:${safePos}%"></div>
+      </div>
+    </div>
+    <div class="stats3">
+      <div class="st"><div class="st-l">投稿數</div><div class="st-v">${it.totalCount||0}</div><div class="st-s">影音${it.videoCount||0}/脆${it.threadCount||0}</div></div>
+      <div class="st"><div class="st-l">${targetLabel}</div><div class="st-v">${fmtM(target)}</div><div class="st-s">${budgetLabel} $${fmtM(budget)}</div></div>
+      <div class="st"><div class="st-l">單價</div><div class="st-v">${it.unitPrice||0}</div><div class="st-s">元/次</div></div>
+    </div>
+    <div class="suggest ${sgCls}">${sugTxt}</div>
+  </div>`;
+}
+
+function switchView(v) {
+  VIEW = v;
+  render();
+}
+
+function renderCapInputs() {
+  const el = document.getElementById('capInputs');
+  if (!el) return;
+  el.innerHTML = Object.entries(groupCap).map(([k,v]) => `
+    <div class="cap-item">
+      <span style="color:var(--text-2)">${k.replace('|',' ')}:</span>
+      <input type="number" min="0" max="500" value="${v}" step="1" onchange="groupCap['${k}']=parseInt(this.value)||0">
+      <span style="color:var(--text-3)">支/週</span>
+    </div>`).join('');
+}
+
+function recalcAlloc() {
+  const grid = document.getElementById('allocGrid');
+  if (!grid) return;
+  const alloc = {};
+  for (const [k,cap] of Object.entries(groupCap)) {
+    const [g,t] = k.split('|');
+    alloc[k] = { group:g, type:t, cap, used:0, tasks:[] };
+  }
+  const items = getItems().filter(i => !i.isOk && i.suggestPosts > 0);
+  for (const it of items) {
+    const typeKey = it.type === 'Threads' ? 'Threads' : '影音';
+    const key = it.group + '|' + typeKey;
+    if (!alloc[key]) continue;
+    const rem = alloc[key].cap - alloc[key].used;
+    if (rem <= 0) continue;
+    const assign = Math.min(it.suggestPosts, rem);
+    alloc[key].used += assign;
+    alloc[key].tasks.push({ label: it.brand+' '+it.product, assign, need: it.suggestPosts });
+  }
+  grid.innerHTML = Object.values(alloc).map(d => `
+    <div class="ag">
+      <div class="ag-title">${d.group} ${d.type}</div>
+      <div class="ag-cap">${d.used} / ${d.cap} 支</div>
+      <div class="ag-bar"><div class="ag-fill" style="width:${Math.min(100,Math.round(d.used/d.cap*100))}%"></div></div>
+      ${d.tasks.length
+        ? '<div class="ag-tasks">'+d.tasks.map(t=>`${t.label}: <strong>${t.assign}</strong>支${t.assign<t.need?' (需'+t.need+')':''}`).join('<br>')+'</div>'
+        : '<div class="ag-empty">無補量需求</div>'}
+    </div>`).join('');
+}
+
+loadData();
+</script>
+</body>
+</html>
