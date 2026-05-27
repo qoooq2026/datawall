@@ -224,6 +224,8 @@ function render() {
   const items = getItems();
   const okCnt = items.filter(i=>i.isOk).length;
   const dangerCnt = items.filter(i=>!i.isOk && i.exposureRate < SAFE*0.7).length;
+  const totalExposure = items.reduce((s,i)=>s+(Number(i.totalExposure)||0),0);
+  const totalRevenue = items.reduce((s,i)=>s+(Number(i.totalRevenue)||0),0);
   const totalGapExp = items.reduce((s,i)=>s+(Number(i.exposureGap)||0),0);
   const totalGapRev = items.reduce((s,i)=>s+(Number(i.revenueGap)||0),0);
   const totalSug = items.reduce((s,i)=>s+(Number(i.suggestPosts)||0),0);
@@ -268,6 +270,8 @@ function render() {
     <div class="metrics">
       <div class="mc"><div class="mc-label">商品數</div><div class="mc-val">${items.length}</div><div class="mc-sub">達標${okCnt} / 落後${items.length-okCnt}</div></div>
       <div class="mc"><div class="mc-label">危險商品</div><div class="mc-val red">${dangerCnt}</div><div class="mc-sub">低於安全線70%</div></div>
+      <div class="mc"><div class="mc-label">累積曝光</div><div class="mc-val">${fmtM(totalExposure)}</div><div class="mc-sub">次</div></div>
+      <div class="mc"><div class="mc-label">累積收費</div><div class="mc-val">$${fmtM(totalRevenue)}</div><div class="mc-sub">元</div></div>
       <div class="mc"><div class="mc-label">曝光缺口</div><div class="mc-val">${fmtM(totalGapExp)}</div><div class="mc-sub">次</div></div>
       <div class="mc"><div class="mc-label">收費缺口</div><div class="mc-val">$${fmtM(totalGapRev)}</div><div class="mc-sub">元</div></div>
       <div class="mc"><div class="mc-label">建議補片</div><div class="mc-val">${totalSug}</div><div class="mc-sub">支</div></div>
