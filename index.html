@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -19,8 +20,6 @@
   --amber-bg: #fef3c7;
   --red: #991b1b;
   --red-bg: #fee2e2;
-  --blue: #1e40af;
-  --blue-bg: #dbeafe;
   --safe-line: #94a3b8;
   --radius: 10px;
   --radius-sm: 6px;
@@ -49,10 +48,17 @@ main { max-width: 960px; margin: 0 auto; padding: 20px 16px; }
 
 .view-toggle { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
 .vt-btn { font-size: 13px; padding: 6px 16px; border: none; background: transparent; color: var(--text-2); cursor: pointer; transition: all .15s; }
-.vt-btn.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.vt-btn.active { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
 .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .filters select { font-size: 13px; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); cursor: pointer; }
+.filters select.filter-active {
+  border-color: #ea6d55;
+  background: #fff3ee;
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: 0 0 0 3px rgba(242,115,91,.18);
+}
 
 .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 18px; }
 .mc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
@@ -65,7 +71,7 @@ main { max-width: 960px; margin: 0 auto; padding: 20px 16px; }
 .safe-legend::before { content:''; display:inline-block; width:14px; height:3px; background:var(--safe-line); border-radius:2px; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; transition: border-color .15s; }
-.card.c-danger { border-left: 3px solid #f87171; border-left-color: #f87171; }
+.card.c-danger { border-left: 3px solid #f87171; }
 .card.c-warn { border-left: 3px solid #fbbf24; }
 .card.c-ok { border-left: 3px solid #4ade80; }
 
@@ -147,13 +153,19 @@ const WEEK_OF_MO = Math.ceil(day / 7);
 const MO_NAMES = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
 
 let DATA = null;
-let VIEW = 'month'; // 'month' | 'week'
+let VIEW = 'month';
+let FILTERS = { group: '', status: '', priority: '' };
 let groupCap = {'A小組|影音':36,'A小組|Threads':60,'B小組|影音':48,'B小組|Threads':24,'C小組|影音':48,'C小組|Threads':24,'D小組|Threads':60};
+let groupPriority = {};
 
-function fmt(n){ return Math.round(n).toLocaleString(); }
-function fmtM(n){ return n>=10000?(n/10000).toFixed(1)+'萬':Math.round(n).toLocaleString(); }
+function fmt(n){ return Math.round(Number(n) || 0).toLocaleString(); }
+function fmtM(n){ n = Number(n) || 0; return n>=10000?(n/10000).toFixed(1)+'萬':Math.round(n).toLocaleString(); }
 function rateClr(r){ return r>=SAFE?'#16a34a':r>=SAFE*0.7?'#d97706':'#dc2626'; }
 function rateMainClr(r){ return r>=SAFE?'#16a34a':r>=SAFE*0.7?'#d97706':'#dc2626'; }
+function esc(s){ return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function selected(actual, expected){ return actual === expected ? 'selected' : ''; }
+function activeClass(value){ return value ? 'filter-active' : ''; }
+function norm(s){ return String(s || '').trim().toLowerCase().replace(/\s+/g, ''); }
 
 function loadData() {
   document.getElementById('statusDot').className = 'status-dot loading';
@@ -164,9 +176,10 @@ function loadData() {
   if (old) old.remove();
 
   window[cb] = function(data) {
-    DATA = data;
+    DATA = data || {};
+    syncCapacityFromData();
     document.getElementById('statusDot').className = 'status-dot';
-    document.getElementById('weekLabel').textContent = data.weekLabel || '';
+    document.getElementById('weekLabel').textContent = DATA.weekLabel || '';
     render();
   };
 
@@ -180,17 +193,29 @@ function loadData() {
   document.body.appendChild(script);
 }
 
+function syncCapacityFromData() {
+  groupPriority = {};
+  const caps = DATA.capacity || DATA.alloc || [];
+  caps.forEach(cap => {
+    const key = cap.group + '|' + cap.type;
+    if (cap.weekly != null) groupCap[key] = Number(cap.weekly) || 0;
+    groupPriority[key] = Array.isArray(cap.priority) ? cap.priority : [];
+  });
+}
+
+function setFilter(key, value) {
+  FILTERS[key] = value;
+  render();
+}
+
 function getItems() {
   if (!DATA) return [];
-  const items = VIEW === 'week' ? (DATA.weekItems || DATA.items) : (DATA.monthItems || DATA.items);
-  const g = document.getElementById('fGroup')?.value || '';
-  const s = document.getElementById('fStatus')?.value || '';
-  const p = document.getElementById('fPri')?.value || '';
+  const items = VIEW === 'week' ? (DATA.weekItems || []) : (DATA.items || DATA.monthItems || []);
   return items.filter(it => {
-    if (g && it.group !== g) return false;
-    if (s === 'ok' && !it.isOk) return false;
-    if (s === 'danger' && it.isOk) return false;
-    if (p && it.priority !== p) return false;
+    if (FILTERS.group && it.group !== FILTERS.group) return false;
+    if (FILTERS.status === 'ok' && !it.isOk) return false;
+    if (FILTERS.status === 'danger' && it.isOk) return false;
+    if (FILTERS.priority && it.priority !== FILTERS.priority) return false;
     return true;
   });
 }
@@ -199,9 +224,9 @@ function render() {
   const items = getItems();
   const okCnt = items.filter(i=>i.isOk).length;
   const dangerCnt = items.filter(i=>!i.isOk && i.exposureRate < SAFE*0.7).length;
-  const totalGapExp = items.reduce((s,i)=>s+i.exposureGap,0);
-  const totalGapRev = items.reduce((s,i)=>s+i.revenueGap,0);
-  const totalSug = items.reduce((s,i)=>s+i.suggestPosts,0);
+  const totalGapExp = items.reduce((s,i)=>s+(Number(i.exposureGap)||0),0);
+  const totalGapRev = items.reduce((s,i)=>s+(Number(i.revenueGap)||0),0);
+  const totalSug = items.reduce((s,i)=>s+(Number(i.suggestPosts)||0),0);
 
   const safeClass = WEEK_OF_MO >= 4 ? 'danger' : WEEK_OF_MO >= 3 ? 'warn' : 'ok';
   const viewLabel = VIEW === 'week' ? '本週進度' : '本月累計';
@@ -209,7 +234,7 @@ function render() {
   document.getElementById('app').innerHTML = `
     <div class="toprow">
       <div class="info-pills">
-        <span class="pill">${MO_NAMES[today.getMonth()]}月 第${WEEK_OF_MO}週 · ${DATA?.weekLabel||''}</span>
+        <span class="pill">${MO_NAMES[today.getMonth()]}月 第${WEEK_OF_MO}週 · ${esc(DATA?.weekLabel||'')}</span>
         <span class="pill ${safeClass}">安全線 ${SAFE}%（今天 ${day}/${totalDays} 天）</span>
         <span class="pill">${viewLabel}</span>
       </div>
@@ -220,18 +245,23 @@ function render() {
     </div>
 
     <div class="filters">
-      <select id="fGroup" onchange="render()">
+      <select id="fGroup" class="${activeClass(FILTERS.group)}" onchange="setFilter('group', this.value)">
         <option value="">所有小組</option>
-        <option>A小組</option><option>B小組</option><option>C小組</option><option>D小組</option>
+        <option ${selected(FILTERS.group,'A小組')}>A小組</option>
+        <option ${selected(FILTERS.group,'B小組')}>B小組</option>
+        <option ${selected(FILTERS.group,'C小組')}>C小組</option>
+        <option ${selected(FILTERS.group,'D小組')}>D小組</option>
       </select>
-      <select id="fStatus" onchange="render()">
+      <select id="fStatus" class="${activeClass(FILTERS.status)}" onchange="setFilter('status', this.value)">
         <option value="">全部狀態</option>
-        <option value="danger">落後安全線</option>
-        <option value="ok">安全線以上</option>
+        <option value="danger" ${selected(FILTERS.status,'danger')}>落後安全線</option>
+        <option value="ok" ${selected(FILTERS.status,'ok')}>安全線以上</option>
       </select>
-      <select id="fPri" onchange="render()">
+      <select id="fPri" class="${activeClass(FILTERS.priority)}" onchange="setFilter('priority', this.value)">
         <option value="">所有優先級</option>
-        <option>高</option><option>中</option><option>低</option>
+        <option ${selected(FILTERS.priority,'高')}>高</option>
+        <option ${selected(FILTERS.priority,'中')}>中</option>
+        <option ${selected(FILTERS.priority,'低')}>低</option>
       </select>
     </div>
 
@@ -245,7 +275,7 @@ function render() {
 
     <div class="safe-legend">灰色垂直線 = 今日安全線（${SAFE}%），進度條須超過此線才安全</div>
 
-    ${items.map(it => renderCard(it)).join('')}
+    ${items.map(it => renderCard(it)).join('') || '<div class="loading-state">目前沒有符合條件的商品</div>'}
 
     <div class="alloc-wrap">
       <div class="section-title">產能分配建議</div>
@@ -263,8 +293,8 @@ function render() {
 }
 
 function renderCard(it) {
-  const eR = it.exposureRate || 0;
-  const rR = it.revenueRate || 0;
+  const eR = Number(it.exposureRate) || 0;
+  const rR = Number(it.revenueRate) || 0;
   const eClr = rateClr(eR);
   const rClr = rateClr(rR);
   const cardCls = it.isOk ? 'c-ok' : eR >= SAFE*0.7 ? 'c-warn' : 'c-danger';
@@ -273,24 +303,28 @@ function renderCard(it) {
   const priCls = it.priority==='高'?'b-hi':it.priority==='中'?'b-mid':'b-lo';
   const sgCls = it.isOk ? 'sg-ok' : eR >= SAFE*0.7 ? 'sg-warn' : 'sg-danger';
   const sugTxt = it.isOk ? '本期目標達成，繼續保持'
-    : `建議補 <strong>${it.suggestPosts}</strong> 支，估補曝光 ${fmtM(it.exposureGap)} 次，收費缺口 $${fmtM(it.revenueGap)} 元`;
+    : `建議補 <strong>${Number(it.suggestPosts)||0}</strong> 支，估補曝光 ${fmtM(it.exposureGap)} 次，收費缺口 $${fmtM(it.revenueGap)} 元`;
   const safePos = Math.min(98, SAFE);
 
   const targetLabel = VIEW === 'week' ? '週目標' : '月目標';
   const budgetLabel = VIEW === 'week' ? '週預算' : '月預算';
-  const target = it.monthTarget || it.weekTarget || 0;
-  const budget = it.monthBudget || it.budget || 0;
+  const target = VIEW === 'week'
+    ? (it.targetExposure ?? it.weekTarget ?? 0)
+    : (it.targetExposure ?? it.monthTarget ?? 0);
+  const budget = VIEW === 'week'
+    ? (it.targetBudget ?? it.weekBudget ?? 0)
+    : (it.targetBudget ?? it.monthBudget ?? it.budget ?? 0);
 
   return `<div class="card ${cardCls}">
     <div class="card-top">
       <div class="card-info">
-        <div class="brand-name">${it.brand}</div>
-        <div class="prod-name">${it.product}</div>
+        <div class="brand-name">${esc(it.brand)}</div>
+        <div class="prod-name">${esc(it.product)}</div>
         <div class="badges">
-          <span class="badge">${it.group}</span>
-          <span class="badge ${priCls}">${it.priority}優先</span>
+          <span class="badge">${esc(it.group)}</span>
+          <span class="badge ${priCls}">${esc(it.priority)}優先</span>
           <span class="badge ${stCls}">${stTxt}</span>
-          <span class="badge">${it.type}</span>
+          <span class="badge">${esc(it.type)}</span>
         </div>
       </div>
       <div class="rate-box">
@@ -331,10 +365,17 @@ function renderCapInputs() {
   if (!el) return;
   el.innerHTML = Object.entries(groupCap).map(([k,v]) => `
     <div class="cap-item">
-      <span style="color:var(--text-2)">${k.replace('|',' ')}:</span>
+      <span style="color:var(--text-2)">${esc(k.replace('|',' '))}:</span>
       <input type="number" min="0" max="500" value="${v}" step="1" onchange="groupCap['${k}']=parseInt(this.value)||0">
       <span style="color:var(--text-3)">支/週</span>
     </div>`).join('');
+}
+
+function priorityIndex(key, item) {
+  const list = groupPriority[key] || [];
+  const product = norm(item.product);
+  const idx = list.findIndex(name => norm(name) === product);
+  return idx >= 0 ? idx : 999;
 }
 
 function recalcAlloc() {
@@ -345,24 +386,46 @@ function recalcAlloc() {
     const [g,t] = k.split('|');
     alloc[k] = { group:g, type:t, cap, used:0, tasks:[] };
   }
-  const items = getItems().filter(i => !i.isOk && i.suggestPosts > 0);
-  for (const it of items) {
-    const typeKey = it.type === 'Threads' ? 'Threads' : '影音';
-    const key = it.group + '|' + typeKey;
-    if (!alloc[key]) continue;
-    const rem = alloc[key].cap - alloc[key].used;
-    if (rem <= 0) continue;
-    const assign = Math.min(it.suggestPosts, rem);
-    alloc[key].used += assign;
-    alloc[key].tasks.push({ label: it.brand+' '+it.product, assign, need: it.suggestPosts });
+
+  for (const [key, bucket] of Object.entries(alloc)) {
+    const items = getItems()
+      .filter(i => !i.isOk && Number(i.suggestPosts) > 0)
+      .filter(i => {
+        const typeKey = i.type === 'Threads' ? 'Threads' : '影音';
+        return key === i.group + '|' + typeKey;
+      })
+      .sort((a, b) => {
+        const pa = priorityIndex(key, a);
+        const pb = priorityIndex(key, b);
+        if (pa !== pb) return pa - pb;
+
+        const az = Number(a.totalCount || 0) === 0;
+        const bz = Number(b.totalCount || 0) === 0;
+        if (az !== bz) return az ? 1 : -1;
+
+        if ((a.exposureRate || 0) !== (b.exposureRate || 0)) {
+          return (b.exposureRate || 0) - (a.exposureRate || 0);
+        }
+
+        return (b.exposureGap || 0) - (a.exposureGap || 0);
+      });
+
+    for (const it of items) {
+      const rem = bucket.cap - bucket.used;
+      if (rem <= 0) break;
+      const assign = Math.min(Number(it.suggestPosts) || 0, rem);
+      bucket.used += assign;
+      bucket.tasks.push({ label: it.brand+' '+it.product, assign, need: it.suggestPosts });
+    }
   }
+
   grid.innerHTML = Object.values(alloc).map(d => `
     <div class="ag">
-      <div class="ag-title">${d.group} ${d.type}</div>
+      <div class="ag-title">${esc(d.group)} ${esc(d.type)}</div>
       <div class="ag-cap">${d.used} / ${d.cap} 支</div>
-      <div class="ag-bar"><div class="ag-fill" style="width:${Math.min(100,Math.round(d.used/d.cap*100))}%"></div></div>
+      <div class="ag-bar"><div class="ag-fill" style="width:${d.cap ? Math.min(100,Math.round(d.used/d.cap*100)) : 0}%"></div></div>
       ${d.tasks.length
-        ? '<div class="ag-tasks">'+d.tasks.map(t=>`${t.label}: <strong>${t.assign}</strong>支${t.assign<t.need?' (需'+t.need+')':''}`).join('<br>')+'</div>'
+        ? '<div class="ag-tasks">'+d.tasks.map(t=>`${esc(t.label)}: <strong>${t.assign}</strong>支${t.assign<t.need?' (需'+t.need+')':''}`).join('<br>')+'</div>'
         : '<div class="ag-empty">無補量需求</div>'}
     </div>`).join('');
 }
