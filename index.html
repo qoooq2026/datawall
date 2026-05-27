@@ -329,6 +329,7 @@ function renderCard(it) {
           <span class="badge ${priCls}">${esc(it.priority)}優先</span>
           <span class="badge ${stCls}">${stTxt}</span>
           <span class="badge">${esc(it.type)}</span>
+          ${it.targetMonth ? `<span class="badge">目標 ${esc(it.targetMonth)}</span>` : ''}
         </div>
       </div>
       <div class="rate-box">
