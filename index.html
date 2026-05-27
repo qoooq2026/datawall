@@ -166,6 +166,15 @@ function esc(s){ return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','
 function selected(actual, expected){ return actual === expected ? 'selected' : ''; }
 function activeClass(value){ return value ? 'filter-active' : ''; }
 function norm(s){ return String(s || '').trim().toLowerCase().replace(/\s+/g, ''); }
+function normalizeType(value) {
+  const s = norm(value);
+  const hasVideo = s.includes('影音');
+  const hasThread = s.includes('thread') || s.includes('脆');
+  if (hasVideo && hasThread) return '影音+Threads';
+  if (hasThread) return '脆';
+  if (hasVideo) return '影音';
+  return s ? String(value || '').trim() : '';
+}
 
 function loadData() {
   document.getElementById('statusDot').className = 'status-dot loading';
@@ -218,7 +227,7 @@ function getItems() {
     if (FILTERS.status === 'ok' && !it.isOk) return false;
     if (FILTERS.status === 'danger' && it.isOk) return false;
     if (FILTERS.priority && it.priority !== FILTERS.priority) return false;
-    if (FILTERS.type && it.type !== FILTERS.type) return false;
+    if (FILTERS.type && normalizeType(it.type) !== FILTERS.type) return false;
     return true;
   });
 }
@@ -340,7 +349,7 @@ function renderCard(it) {
           <span class="badge">${esc(it.group)}</span>
           <span class="badge ${priCls}">${esc(it.priority)}優先</span>
           <span class="badge ${stCls}">${stTxt}</span>
-          <span class="badge">${esc(it.type)}</span>
+          <span class="badge">${esc(normalizeType(it.type) || it.type)}</span>
           ${it.targetMonth ? `<span class="badge">目標 ${esc(it.targetMonth)}</span>` : ''}
         </div>
       </div>
