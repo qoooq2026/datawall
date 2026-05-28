@@ -188,6 +188,23 @@ function loadData() {
   document.getElementById('statusDot').className = 'status-dot loading';
   document.getElementById('app').innerHTML = '<div class="loading-state">載入資料中...</div>';
 
+  if (window.google && google.script && google.script.run) {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        DATA = data || {};
+        syncCapacityFromData();
+        document.getElementById('statusDot').className = 'status-dot';
+        document.getElementById('weekLabel').textContent = DATA.weekLabel || '';
+        render();
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('app').innerHTML = '<div class="error-state">無法載入資料：' + esc(err && err.message ? err.message : err) + '</div>';
+        document.getElementById('statusDot').className = 'status-dot loading';
+      })
+      .getDashboardData();
+    return;
+  }
+
   const cb = 'gasCallback';
   const old = document.getElementById('gasScript');
   if (old) old.remove();
