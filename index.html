@@ -245,8 +245,16 @@ function setFilter(key, value) {
 function getItems() {
   if (!DATA) return [];
   const items = FILTERS.group
-    ? (VIEW === 'week' ? (DATA.weekGroupItems || []) : (DATA.monthGroupItems || []))
-    : (VIEW === 'week' ? (DATA.weekItems || []) : (DATA.items || DATA.monthItems || []));
+    ? (VIEW === 'week'
+      ? (DATA.weekGroupItems || [])
+      : VIEW === 'lastWeek'
+        ? (DATA.lastWeekGroupItems || [])
+        : (DATA.monthGroupItems || []))
+    : (VIEW === 'week'
+      ? (DATA.weekItems || [])
+      : VIEW === 'lastWeek'
+        ? (DATA.lastWeekItems || [])
+        : (DATA.items || DATA.monthItems || []));
   return items.filter(it => {
     if (FILTERS.group && it.group !== FILTERS.group) return false;
     if (FILTERS.status === 'ok' && !it.isOk) return false;
