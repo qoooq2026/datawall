@@ -244,17 +244,23 @@ function setFilter(key, value) {
 
 function getItems() {
   if (!DATA) return [];
+
   const items = FILTERS.group
-    ? (VIEW === 'week'
-      ? (DATA.weekGroupItems || [])
-      : VIEW === 'lastWeek'
-        ? (DATA.lastWeekGroupItems || [])
-        : (DATA.monthGroupItems || []))
-    : (VIEW === 'week'
-      ? (DATA.weekItems || [])
-      : VIEW === 'lastWeek'
-        ? (DATA.lastWeekItems || [])
-        : (DATA.items || DATA.monthItems || []));
+    ? (
+      VIEW === 'week'
+        ? (DATA.weekGroupItems || [])
+        : VIEW === 'lastWeek'
+          ? (DATA.lastWeekGroupItems || [])
+          : (DATA.monthGroupItems || [])
+    )
+    : (
+      VIEW === 'week'
+        ? (DATA.weekItems || [])
+        : VIEW === 'lastWeek'
+          ? (DATA.lastWeekItems || [])
+          : (DATA.items || DATA.monthItems || [])
+    );
+
   return items.filter(it => {
     if (FILTERS.group && it.group !== FILTERS.group) return false;
     if (FILTERS.status === 'ok' && !it.isOk) return false;
@@ -277,12 +283,22 @@ function render() {
   const totalSug = items.reduce((s,i)=>s+(Number(i.suggestPosts)||0),0);
 
   const safeClass = WEEK_OF_MO >= 4 ? 'danger' : WEEK_OF_MO >= 3 ? 'warn' : 'ok';
-  const viewLabel = VIEW === 'week' ? '本週進度' : '本月累計';
+  const viewLabel =
+    VIEW === 'week'
+      ? '本週進度'
+      : VIEW === 'lastWeek'
+        ? '上週統計'
+        : '本月累計';
+  
+  const activeWeekLabel =
+    VIEW === 'lastWeek'
+      ? (DATA?.lastWeekLabel || '')
+      : (DATA?.weekLabel || '');
 
   document.getElementById('app').innerHTML = `
     <div class="toprow">
       <div class="info-pills">
-        <span class="pill">${MO_NAMES[today.getMonth()]}月 第${WEEK_OF_MO}週 · ${esc(DATA?.weekLabel||'')}</span>
+        <span class="pill">${MO_NAMES[today.getMonth()]}月 第${WEEK_OF_MO}週 · ${esc(activeWeekLabel)}</span>
         <span class="pill ${safeClass}">安全線 ${SAFE}%（今天 ${day}/${totalDays} 天）</span>
         <span class="pill">${viewLabel}</span>
         ${DATA?.debug ? `<span class="pill">規則 ${DATA.debug.selectedTargetRules}/${DATA.debug.allTargetRules} · cache ${DATA.debug.cacheRows} · 組 ${DATA.debug.weekGroupItems || 0}</span>` : ''}
@@ -290,6 +306,7 @@ function render() {
       <div class="view-toggle">
         <button class="vt-btn ${VIEW==='month'?'active':''}" onclick="switchView('month')">月累計</button>
         <button class="vt-btn ${VIEW==='week'?'active':''}" onclick="switchView('week')">本週</button>
+        <button class="vt-btn ${VIEW==='lastWeek'?'active':''}" onclick="switchView('lastWeek')">上週</button>
       </div>
     </div>
 
@@ -366,12 +383,13 @@ function renderCard(it) {
     : `建議補 <strong>${Number(it.suggestPosts)||0}</strong> 支，估補曝光 ${fmtM(it.exposureGap)} 次，收費缺口 $${fmtM(it.revenueGap)} 元`;
   const safePos = Math.min(98, SAFE);
 
-  const targetLabel = VIEW === 'week' ? '週目標' : '月目標';
-  const budgetLabel = VIEW === 'week' ? '週預算' : '月預算';
-  const target = VIEW === 'week'
+  const isWeekView = VIEW === 'week' || VIEW === 'lastWeek';
+  const targetLabel = isWeekView ? '週目標' : '月目標';
+  const budgetLabel = isWeekView ? '週預算' : '月預算';
+  const target = isWeekView
     ? (it.targetExposure ?? it.weekTarget ?? 0)
     : (it.targetExposure ?? it.monthTarget ?? 0);
-  const budget = VIEW === 'week'
+  const budget = isWeekView
     ? (it.targetBudget ?? it.weekBudget ?? 0)
     : (it.targetBudget ?? it.monthBudget ?? it.budget ?? 0);
 
