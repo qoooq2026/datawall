@@ -469,13 +469,14 @@ function recalcAlloc() {
   }
 
   for (const [key, bucket] of Object.entries(alloc)) {
-    const items = getItems()
-      .filter(i => !i.isOk && Number(i.suggestPosts) > 0)
-      .filter(i => {
-        const typeKey = i.type === 'Threads' ? 'Threads' : '影音';
-        return key === i.group + '|' + typeKey;
-      })
-      .sort((a, b) => {
+      const items = getItems()
+        .filter(i => !i.isOk && Number(i.suggestPosts) > 0)
+        .filter(i => {
+          const normalizedType = normalizeType(i.type);
+          const typeKey = normalizedType === '脆' ? 'Threads' : '影音';
+          return key === i.group + '|' + typeKey;
+        })
+        .sort((a, b) => {
         const pa = priorityIndex(key, a);
         const pb = priorityIndex(key, b);
         if (pa !== pb) return pa - pb;
