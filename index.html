@@ -313,12 +313,7 @@ function render() {
     <div class="filters">
       <select id="fGroup" class="${activeClass(FILTERS.group)}" onchange="setFilter('group', this.value)">
         <option value="">所有小組</option>
-        <option ${selected(FILTERS.group,'A小組')}>A小組</option>
-        <option ${selected(FILTERS.group,'B小組')}>B小組</option>
-        <option ${selected(FILTERS.group,'C小組')}>C小組</option>
-        <option ${selected(FILTERS.group,'D小組')}>D小組</option>
-        <option ${selected(FILTERS.group,'代發小組')}>代發小組</option>
-        <option ${selected(FILTERS.group,'其他小組')}>其他小組</option>
+        ${renderGroupOptions()}
       </select>
       <select id="fStatus" class="${activeClass(FILTERS.status)}" onchange="setFilter('status', this.value)">
         <option value="">全部狀態</option>
@@ -433,7 +428,13 @@ function renderCard(it) {
     <div class="suggest ${sgCls}">${sugTxt}</div>
   </div>`;
 }
-
+function renderGroupOptions() {
+  if (!DATA) return '';
+  const source = DATA.items || DATA.monthItems || [];
+  const groups = [...new Set(source.map(it => it.group).filter(Boolean))];
+  groups.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  return groups.map(g => `<option ${selected(FILTERS.group, g)}>${esc(g)}</option>`).join('');
+}
 function switchView(v) {
   VIEW = v;
   render();
