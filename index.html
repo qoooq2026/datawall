@@ -460,16 +460,18 @@ function priorityIndex(key, item) {
 }
 
 function recalcAlloc() {
-  const grid = document.getElementById('allocGrid');
-  if (!grid) return;
-  const alloc = {};
-  for (const [k,cap] of Object.entries(groupCap)) {
-    const [g,t] = k.split('|');
-    alloc[k] = { group:g, type:t, cap, used:0, tasks:[] };
-  }
-
-  for (const [key, bucket] of Object.entries(alloc)) {
-      const items = getItems()
+    const grid = document.getElementById('allocGrid');
+    if (!grid) return;
+    const alloc = {};
+    for (const [k,cap] of Object.entries(groupCap)) {
+      const [g,t] = k.split('|');
+      alloc[k] = { group:g, type:t, cap, used:0, tasks:[] };
+    }
+  
+    const allWeekItems = DATA?.weekGroupItems || [];
+  
+    for (const [key, bucket] of Object.entries(alloc)) {
+      const items = allWeekItems
         .filter(i => !i.isOk && Number(i.suggestPosts) > 0)
         .filter(i => {
           const normalizedType = normalizeType(i.type);
