@@ -430,9 +430,9 @@ function renderCard(it) {
 }
 function renderGroupOptions() {
   if (!DATA) return '';
-  const source = DATA.items || DATA.monthItems || [];
-  const groups = [...new Set(source.map(it => it.group).filter(Boolean))];
-  groups.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  const groups = DATA.groupList && DATA.groupList.length
+    ? DATA.groupList
+    : [...new Set((DATA.items || DATA.monthItems || []).map(it => it.group).filter(Boolean))];
   return groups.map(g => `<option ${selected(FILTERS.group, g)}>${esc(g)}</option>`).join('');
 }
 function switchView(v) {
